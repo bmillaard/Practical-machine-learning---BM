@@ -1,0 +1,114 @@
+---
+title: "Pml"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+library(statsr)
+library(lattice)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(RColorBrewer)
+```
+### Introduction
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. 
+In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The goal of this project is to predict the manner in which they did the exercise.
+
+## Object of research
+
+One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. The goal of the project is to predict the manner of exercises by using the “classe” variable in the training set. Prepare a report on how the model is built,how to validate it and what is the expected out of sample error. This should be substabtiated by the choices you did. this prediction model will be used for the prediction of 20 different test cases. 
+
+###Loading data and data cleaning
+
+first we load the data and set all empty values to NA so we can remove them later 
+```{r}
+training<-read.table("~/Oscar/Practical machine learning/pml-training kopie.csv", header=TRUE, sep=",", na.strings = c("NA","",'#DIV/0!'))
+testing<-read.table("~/Oscar/Practical machine learning/pml-testing kopie.csv",header=TRUE, sep=",", na.strings = c("NA","",'#DIV/0!'))
+```
+
+and explore the data
+
+```{r}
+dim(training)
+dim(testing)
+```
+
+Next step is to remove the NZV balances and the na values from the dataset
+
+
+```{r}
+nzv_var <- nearZeroVar(training)
+training <- training[ , -nzv_var]
+dim(training)
+```
+
+```{r}
+trainingclean <- training[,(colSums(is.na(training)) == 0 )]
+dim(trainingclean)
+```
+```{r}
+trainingclean <- trainingclean[, -(1:5)]
+dim(trainingclean)
+```
+
+Now we can split the cleaned training dataset in a training (70%) and a validation (30%) dataset. 
+
+```{r}
+inTraining=createDataPartition(training$classe, p=0.7, list=FALSE)
+    settraining <-trainingclean[inTraining,]
+    setvalidation <- trainingclean[-inTraining,]
+```
+
+##Modelling
+
+We will explore a decision tree model and a random forest model and test what model fits the data best
+
+#Decision tree model
+
+```{r}
+decisionmodel <- train(classe ~ .,method='rpart',data=settraining)
+```
+```{r}
+predictdm = predict(decisionmodel,setvalidation)
+confusionMatrix(setvalidation$classe,predictdm)
+```
+
+As it shows the accuracy of this model on the testing subset of our training data set the accuracy is 49.5%
+# Random forest model
+
+```{r}
+rfmodel <- randomForest(classe ~ ., data=settraining, importance = TRUE, ntree = 100)
+
+```
+
+```{r}
+predictrf = predict(rfmodel,setvalidation, type = 'class')
+confusionMatrix(setvalidation$classe,predictrf)
+```
+
+As it shows the accuracy of this model on the testing subset of our training data set the accuracy is over 99% and so we will use the RF model on the testset. The etimated out of sample error is .32%
+
+## Course Project Prediction Quiz Portion
+
+Apply your machine learning algorithm to the 20 test cases available in the test data above and submit your predictions in appropriate format to the Course Project Prediction Quiz for automated grading.
+
+```{r}
+Quizprediction <- predict(rfmodel, newdata=testing)
+Quizprediction
+```
+
